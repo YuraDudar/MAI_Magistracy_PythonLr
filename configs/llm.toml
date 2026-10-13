@@ -1,0 +1,3 @@
+# Режим LLM: фиксируется версия шаблона запроса.
+mode = "llm"
+prompt_template_version = "prompt-v1"

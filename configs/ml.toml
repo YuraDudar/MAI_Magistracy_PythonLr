@@ -1,0 +1,3 @@
+# Режим ML: фиксируется версия схемы признаков.
+mode = "ml"
+feature_schema_version = "features-v1"

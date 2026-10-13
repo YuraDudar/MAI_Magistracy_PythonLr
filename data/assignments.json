@@ -1,0 +1,34 @@
+[
+  {
+    "assignment_id": "assignment-01",
+    "allowed_template": "from typing import Iterable\n\ndef solve(values: Iterable[int]) -> int:\n",
+    "requirements": [
+      {
+        "requirement_id": "R1",
+        "description": "Определена функция solve",
+        "pattern": "def solve("
+      },
+      {
+        "requirement_id": "R2",
+        "description": "Указан тип результата",
+        "pattern": "-> int"
+      },
+      {
+        "requirement_id": "R3",
+        "description": "Отрицательные значения отбрасываются",
+        "pattern": ">= 0"
+      }
+    ]
+  },
+  {
+    "assignment_id": "assignment-02",
+    "allowed_template": null,
+    "requirements": [
+      {
+        "requirement_id": "R1",
+        "description": "Определена функция main",
+        "pattern": "def main("
+      }
+    ]
+  }
+]
