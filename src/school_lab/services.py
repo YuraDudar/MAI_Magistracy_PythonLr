@@ -3,10 +3,13 @@
 from dataclasses import asdict, dataclass, field
 from typing import Literal, NotRequired, TypedDict
 
-from school_lab.errors import SubmissionError
+from school_lab.config import LLMConfig, MLConfig
+from school_lab.contracts import AnalysisContext, AnalyzerRegistry, validate_report
+from school_lab.errors import AnalysisFailure, SubmissionError
 from school_lab.hashing import submission_hash
+from school_lab.models import AnalysisReport
 from school_lab.parsing import parse_submission
-from school_lab.repositories import SubmissionRepository
+from school_lab.repositories import AssignmentRepository, SubmissionRepository
 from school_lab.sources import SubmissionSource
 
 
@@ -76,3 +79,39 @@ def import_source(source: SubmissionSource, service: SubmissionService) -> Impor
                 target = summary.accepted if result.status == "accepted" else summary.duplicate
                 target.append(result.submission_id)
     return summary
+
+
+class AnalysisService:
+    """Запуск анализатора по имени из реестра. Не знает конкретных классов анализаторов."""
+
+    def __init__(
+        self,
+        submissions: SubmissionRepository,
+        assignments: AssignmentRepository,
+        registry: AnalyzerRegistry,
+        config: LLMConfig | MLConfig,
+    ) -> None:
+        self.submissions = submissions
+        self.assignments = assignments
+        self.registry = registry
+        self.config = config
+
+    def run(self, submission_id: str, analyzer_name: str) -> AnalysisReport:
+        submission = self.submissions.get(submission_id)
+        if submission is None:
+            raise AnalysisFailure("not_found", f"Сдача {submission_id} не принята")
+        assignment = self.assignments.get(submission.assignment_id)
+        if assignment is None:
+            raise AnalysisFailure("unknown_assignment", f"Задание {submission.assignment_id} не найдено")
+        context = AnalysisContext(assignment=assignment, config=self.config)
+        analyzer = self.registry.create(analyzer_name)
+        try:
+            report = analyzer.analyze(submission, context)
+        except AnalysisFailure:
+            raise
+        except Exception as exc:  # граница плагина: дефект анализатора не маскируется, а явно сообщается
+            raise AnalysisFailure("analyzer_error", f"{analyzer_name}: {type(exc).__name__}: {exc}") from exc
+        validate_report(report, submission, context)
+        if (report.analyzer_id, report.analyzer_version) != (analyzer.analyzer_id, analyzer.analyzer_version):
+            raise AnalysisFailure("invalid_report", "Отчёт не соответствует вызванному анализатору")
+        return report

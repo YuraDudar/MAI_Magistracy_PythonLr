@@ -6,6 +6,10 @@ from typing import Any
 
 import pytest
 
+from school_lab.config import LLMConfig, MLConfig, load_config
+from school_lab.contracts import AnalysisContext
+from school_lab.models import Assignment, Submission
+from school_lab.parsing import load_assignments, parse_submission
 from school_lab.repositories import InMemorySubmissionRepository
 from school_lab.services import SubmissionService
 
@@ -47,3 +51,28 @@ def repository() -> InMemorySubmissionRepository:
 @pytest.fixture
 def service(repository: InMemorySubmissionRepository) -> SubmissionService:
     return SubmissionService(repository)
+
+
+@pytest.fixture
+def assignments() -> list[Assignment]:
+    return load_assignments(DATA_DIR / "assignments.json")
+
+
+@pytest.fixture(params=["llm", "ml"])
+def config(request: pytest.FixtureRequest) -> LLMConfig | MLConfig:
+    """Оба режима анализа: тесты с этой фикстурой выполняются дважды."""
+    return load_config(CONFIG_DIR / f"{request.param}.toml")
+
+
+@pytest.fixture
+def context(assignments: list[Assignment]) -> AnalysisContext:
+    return AnalysisContext(assignment=assignments[0], config=load_config(CONFIG_DIR / "llm.toml"))
+
+
+@pytest.fixture
+def submission(raw_submission: dict[str, Any]) -> Submission:
+    return parse_submission(raw_submission)
+
+
+def make_submission(raw: dict[str, Any], **updates: Any) -> Submission:
+    return parse_submission({**copy.deepcopy(raw), **updates})

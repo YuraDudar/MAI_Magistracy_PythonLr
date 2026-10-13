@@ -1,7 +1,7 @@
 """Доменные модели. Все модели строгие, неизменяемые и отклоняют неизвестные поля."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import PydanticCustomError
@@ -94,3 +94,41 @@ class Assignment(DomainModel):
     assignment_id: NonEmptyStr
     allowed_template: str | None
     requirements: tuple[Requirement, ...] = Field(strict=False)
+
+
+class Evidence(DomainModel):
+    """Включительный диапазон строк исходного поля сдачи, нумерация с 1."""
+
+    submission_id: NonEmptyStr
+    field: Literal["text", "code"]
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "Evidence":
+        if self.start_line > self.end_line:
+            raise PydanticCustomError("evidence_range", "start_line не может быть больше end_line")
+        return self
+
+
+class Finding(DomainModel):
+    """Наблюдение анализатора. score=None - численная оценка не определена (не ошибка)."""
+
+    kind: Literal["similarity", "rubric_feedback", "processing_error"]
+    score: float | None = Field(ge=0, le=1)
+    evidence: tuple[Evidence, ...]
+    explanation: NonEmptyStr
+
+
+class AnalysisReport(DomainModel):
+    """Отчёт связан с версией сдачи, анализатора и конфигурации. Решение о нарушении не принимает."""
+
+    report_id: NonEmptyStr
+    submission_id: NonEmptyStr
+    submission_hash: NonEmptyStr
+    analyzer_id: NonEmptyStr
+    analyzer_version: NonEmptyStr
+    config_hash: NonEmptyStr
+    findings: tuple[Finding, ...]
+    created_at: AwareTimestamp
+    review_required: bool

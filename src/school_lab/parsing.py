@@ -45,11 +45,13 @@ def decode_json(line: str) -> object:
         ) from exc
 
 
-def error_location(loc: Sequence[int | str], ctx: dict[str, object] | None) -> str:
+def error_location(
+    loc: Sequence[int | str], ctx: dict[str, object] | None, default: str = "submission"
+) -> str:
     """Путь поля из ошибки Pydantic; для проверок уровня модели берётся ctx['field']."""
     if loc:
         return ".".join(str(part) for part in loc)
-    return str((ctx or {}).get("field", "submission"))
+    return str((ctx or {}).get("field", default))
 
 
 def to_submission_error(exc: ValidationError) -> SubmissionError:

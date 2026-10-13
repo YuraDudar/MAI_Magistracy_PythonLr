@@ -7,7 +7,11 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from school_lab.app import build_application
+from school_lab.config import load_config
+from school_lab.errors import AnalysisFailure, ConfigError
 from school_lab.manifest import build_manifest, write_manifest
+from school_lab.parsing import load_assignments
 from school_lab.repositories import InMemorySubmissionRepository
 from school_lab.services import ImportSummary, SubmissionService, import_source
 from school_lab.sources import JSONLSource
@@ -46,6 +50,35 @@ def _cmd_import(args: argparse.Namespace) -> int:
     return 1 if summary.errors else 0
 
 
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    try:
+        app = build_application(load_config(args.config), load_assignments(args.assignments))
+    except ConfigError as exc:
+        return _fail("config_error", str(exc))
+    names = args.analyzer or list(app.registry.names())
+    unknown = sorted(set(names) - set(app.registry.names()))
+    if unknown:
+        return _fail("config_error", f"Неизвестные анализаторы: {unknown}")
+    try:
+        summary = _import_files(args.paths, app.submission_service)
+    except (OSError, UnicodeError) as exc:
+        return _fail("source_unavailable", str(exc))
+
+    ids = args.submission or [s.submission_id for s in app.submissions.list_all()]
+    reports: list[object] = []
+    failures: list[dict[str, str]] = []
+    for submission_id in ids:
+        for name in names:
+            try:
+                report = app.analysis_service.run(submission_id, name)
+            except AnalysisFailure as exc:
+                failures.append({"submission_id": submission_id, "analyzer": name, **exc.to_dict()})
+            else:
+                reports.append(report.model_dump(mode="json"))
+    _print_json({"import": summary.to_dict(), "reports": reports, "failures": failures})
+    return 1 if summary.errors or failures else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="school-lab", description="Приём учебных сдач и анализ")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -54,6 +87,14 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd.add_argument("paths", nargs="+", type=Path)
     import_cmd.add_argument("--manifest", type=Path, help="Куда сохранить manifest корпуса")
     import_cmd.set_defaults(handler=_cmd_import)
+
+    analyze_cmd = commands.add_parser("analyze", help="Импорт и анализ сдач")
+    analyze_cmd.add_argument("paths", nargs="+", type=Path)
+    analyze_cmd.add_argument("--assignments", type=Path, required=True, help="JSON-справочник заданий")
+    analyze_cmd.add_argument("--config", type=Path, required=True, help="TOML-конфигурация режима llm/ml")
+    analyze_cmd.add_argument("--analyzer", action="append", help="Имя анализатора (по умолчанию все)")
+    analyze_cmd.add_argument("--submission", action="append", help="Анализировать только эти submission_id")
+    analyze_cmd.set_defaults(handler=_cmd_analyze)
     return parser
 
 
