@@ -33,3 +33,5 @@ select = ["E", "F", "W", "I", "B", "UP"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+mypy_path = "src"
+files = ["src", "tests", "scripts"]

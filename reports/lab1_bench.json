@@ -1,0 +1,82 @@
+{
+  "environment": {
+    "python": "3.14.7",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "processor": "x86_64"
+  },
+  "repeats": 3,
+  "import": [
+    {
+      "records": 100,
+      "median_ms": 1.7,
+      "runs_ms": [
+        2.0,
+        1.7,
+        1.7
+      ],
+      "per_record_us": 16.8,
+      "peak_mib": 0.36
+    },
+    {
+      "records": 1000,
+      "median_ms": 16.7,
+      "runs_ms": [
+        18.3,
+        16.7,
+        16.5
+      ],
+      "per_record_us": 16.7,
+      "peak_mib": 2.29
+    },
+    {
+      "records": 5000,
+      "median_ms": 89.6,
+      "runs_ms": [
+        89.6,
+        89.0,
+        89.6
+      ],
+      "per_record_us": 17.9,
+      "peak_mib": 10.79
+    }
+  ],
+  "analyzers": [
+    {
+      "analyzer": "length",
+      "submissions": 1000,
+      "median_ms": 86.1,
+      "per_submission_us": 86.1
+    },
+    {
+      "analyzer": "template",
+      "submissions": 1000,
+      "median_ms": 71.3,
+      "per_submission_us": 71.3
+    },
+    {
+      "analyzer": "declaration",
+      "submissions": 1000,
+      "median_ms": 62.4,
+      "per_submission_us": 62.4
+    },
+    {
+      "analyzer": "requirements",
+      "submissions": 1000,
+      "median_ms": 97.8,
+      "per_submission_us": 97.8
+    },
+    {
+      "analyzer": "model-stub",
+      "submissions": 1000,
+      "median_ms": 83.7,
+      "per_submission_us": 83.7
+    }
+  ],
+  "validation": {
+    "calls": 2000,
+    "stub_generate_us": 0.8,
+    "parse_feedback_us": 4.7,
+    "validate_report_us": 20.2,
+    "full_model_stub_run_us": 78.4
+  }
+}
